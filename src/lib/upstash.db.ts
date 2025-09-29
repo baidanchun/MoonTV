@@ -6,7 +6,7 @@ import { AdminConfig } from './admin.types';
 import { Favorite, IStorage, PlayRecord, SkipConfig } from './types';
 
 // 搜索历史最大条数
-const SEARCH_HISTORY_LIMIT = 20;
+const SEARCH_HISTORY_LIMIT = 50;
 
 // 数据类型转换辅助函数
 function ensureString(value: any): string {
