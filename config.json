@@ -355,12 +355,7 @@
       "detail": "https://slapibf.com",
       "is_adult": true
     },
-    "xrbsp": {
-      "api": "https://www.xrbsp.com/api/json.php",
-      "name": "AV-淫水机资源",
-      "detail": "https://www.xrbsp.com",
-      "is_adult": true
-    },
+    
     "apiyutu": {
       "api": "https://apiyutu.com/api.php/provide/vod",
       "name": "AV-玉兔资源",
