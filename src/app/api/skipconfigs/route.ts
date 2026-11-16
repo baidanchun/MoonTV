@@ -6,13 +6,35 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { SkipConfig } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: '未登录' }, { status: 401 });
+    }
+
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
+
+      // 检查是否需要迁移跳过配置
+      if (!userInfoV2.skip_migrated) {
+        await db.migrateSkipConfigs(authInfo.username);
+      }
+    } else {
+      // 站长也需要检查迁移
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2?.skip_migrated) {
+        await db.migrateSkipConfigs(authInfo.username);
+      }
     }
 
     const { searchParams } = new URL(request.url);
@@ -42,6 +64,17 @@ export async function POST(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: '未登录' }, { status: 401 });
+    }
+
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
     }
 
     const body = await request.json();
@@ -81,6 +114,17 @@ export async function DELETE(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: '未登录' }, { status: 401 });
+    }
+
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
     }
 
     const { searchParams } = new URL(request.url);

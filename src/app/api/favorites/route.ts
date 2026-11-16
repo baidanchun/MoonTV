@@ -6,7 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Favorite } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/favorites
@@ -21,6 +21,31 @@ export async function GET(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 检查用户状态和执行迁移
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
+
+      // 检查收藏迁移标识，没有迁移标识时执行迁移
+      if (!userInfoV2.favorite_migrated) {
+        console.log(`用户 ${authInfo.username} 收藏未迁移，开始执行迁移...`);
+        await db.migrateFavorites(authInfo.username);
+      }
+    } else {
+      // 站长也需要执行迁移（站长可能不在数据库中，直接尝试迁移）
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2 || !userInfoV2.favorite_migrated) {
+        console.log(`站长 ${authInfo.username} 收藏未迁移，开始执行迁移...`);
+        await db.migrateFavorites(authInfo.username);
+      }
     }
 
     const { searchParams } = new URL(request.url);
@@ -61,6 +86,17 @@ export async function POST(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
     }
 
     const body = await request.json();
@@ -118,6 +154,17 @@ export async function DELETE(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
+      const userInfoV2 = await db.getUserInfoV2(authInfo.username);
+      if (!userInfoV2) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (userInfoV2.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
     }
 
     const username = authInfo.username;
