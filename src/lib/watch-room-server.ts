@@ -40,6 +40,7 @@ export class WatchRoomServer {
             description: data.description,
             password: data.password,
             isPublic: data.isPublic,
+            roomType: data.roomType,
             ownerId: userId,
             ownerName: data.userName,
             ownerToken: ownerToken, // 保存房主令牌
